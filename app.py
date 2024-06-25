@@ -175,6 +175,35 @@ def admin_settings():
 
     return render_template('admin_settings.html', admin_email=current_user.email)
 
+@app.route('/create_user', methods=['GET', 'POST'])
+def create_user():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    current_user = User.query.get(user_id)
+    if not current_user.is_admin:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        fullname = request.form['fullname']
+        email = request.form['email']
+        password = request.form['password']
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            # Handle the case where the user already exists
+            return "User with this email already exists."
+
+        new_user = User(fullname=fullname, email=email, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()  # Commit the user to the database
+        return redirect(url_for('admin_users'))
+
+    return render_template('create_user.html')
+
 @app.route('/admin/reports', methods=['GET'])
 def admin_reports():
     if 'user_id' not in session:
